@@ -1,0 +1,5 @@
+{
+  "name": "OJT DTR Tracker",
+  "description": "A comprehensive Daily Time Record (DTR) application for OJT students with 120-hour progress tracking, bulk entry, and export capabilities.",
+  "requestFramePermissions": []
+}
