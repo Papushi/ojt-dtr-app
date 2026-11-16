@@ -1,3 +1,5 @@
+export type EntryType = 'regular' | 'holiday' | 'absent';
+
 export interface DTREntry {
   id: string;
   date: string; // YYYY-MM-DD
@@ -7,7 +9,7 @@ export interface DTREntry {
   isOvertime: boolean;
   overtimeReason?: string;
   remarks: string;
-  type: 'regular' | 'holiday' | 'absent';
+  type: EntryType;
   totalHours: number;
 }
 
@@ -25,8 +27,20 @@ export interface AppConfig {
   targetHours: number;
   theme: 'light' | 'dark';
   timeFormat: '12h' | '24h';
+  roundTo15Min?: boolean;
+  onboardingCompleted?: boolean;
+  acceptedTermsAt?: string;
 }
 
 export interface DraftEntry extends Partial<DTREntry> {
+  draftId: string;
   lastSaved: number;
+  label?: string;
+}
+
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title: string;
+  description?: string;
 }

@@ -1,0 +1,192 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserSettings(data, userId) {
+      return data.keys().hasAll([
+        'uid',
+        'name',
+        'email',
+        'targetHours',
+        'timeFormat',
+        'roundTo15Min',
+        'onboardingCompleted',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid',
+        'name',
+        'email',
+        'picture',
+        'supervisorName',
+        'department',
+        'trainingCategory',
+        'targetHours',
+        'timeFormat',
+        'roundTo15Min',
+        'onboardingCompleted',
+        'acceptedTermsAt',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.uid is string && data.uid == request.auth.uid && data.uid == userId && isValidId(data.uid) &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+      data.email is string && data.email.size() <= 200 &&
+      (!('picture' in data) || (data.picture is string && data.picture.size() <= 500)) &&
+      (!('supervisorName' in data) || (data.supervisorName is string && data.supervisorName.size() <= 120)) &&
+      (!('department' in data) || (data.department is string && data.department.size() <= 120)) &&
+      (!('trainingCategory' in data) || (data.trainingCategory is string && data.trainingCategory.size() <= 60)) &&
+      data.targetHours is number && data.targetHours >= 1 && data.targetHours <= 5000 &&
+      data.timeFormat is string && (data.timeFormat == '12h' || data.timeFormat == '24h') &&
+      data.roundTo15Min is bool &&
+      data.onboardingCompleted is bool &&
+      (!('acceptedTermsAt' in data) || (data.acceptedTermsAt is string && data.acceptedTermsAt.size() <= 64)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidDTREntry(data, userId) {
+      return data.keys().hasAll([
+        'uid',
+        'date',
+        'timeIn',
+        'timeOut',
+        'breakMinutes',
+        'isOvertime',
+        'remarks',
+        'type',
+        'totalHours',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid',
+        'date',
+        'timeIn',
+        'timeOut',
+        'breakMinutes',
+        'isOvertime',
+        'overtimeReason',
+        'remarks',
+        'type',
+        'totalHours',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.uid is string && data.uid == request.auth.uid && data.uid == userId && isValidId(data.uid) &&
+      data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+      data.timeIn is string && data.timeIn.size() <= 10 &&
+      data.timeOut is string && data.timeOut.size() <= 10 &&
+      data.breakMinutes is number && data.breakMinutes >= 0 && data.breakMinutes <= 360 &&
+      data.isOvertime is bool &&
+      (!('overtimeReason' in data) || (data.overtimeReason is string && data.overtimeReason.size() <= 300)) &&
+      data.remarks is string && data.remarks.size() <= 500 &&
+      data.type is string && (data.type == 'regular' || data.type == 'holiday' || data.type == 'absent') &&
+      data.totalHours is number && data.totalHours >= 0 && data.totalHours <= 24 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId) && isVerifiedUser();
+      allow list: if false;
+
+      allow create: if isValidId(userId) &&
+        isOwner(userId) &&
+        isVerifiedUser() &&
+        isValidUserSettings(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(userId) &&
+        isOwner(userId) &&
+        isVerifiedUser() &&
+        isValidUserSettings(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name',
+          'email',
+          'picture',
+          'supervisorName',
+          'department',
+          'trainingCategory',
+          'targetHours',
+          'timeFormat',
+          'roundTo15Min',
+          'onboardingCompleted',
+          'acceptedTermsAt',
+          'updatedAt'
+        ]);
+
+      allow delete: if false;
+
+      match /entries/{entryId} {
+        allow get: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isVerifiedUser();
+        allow list: if isValidId(userId) && isOwner(userId) && isVerifiedUser() && resource.data.uid == request.auth.uid;
+
+        allow create: if isValidId(userId) &&
+          isValidId(entryId) &&
+          isOwner(userId) &&
+          isVerifiedUser() &&
+          isValidDTREntry(incoming(), userId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+
+        allow update: if isValidId(userId) &&
+          isValidId(entryId) &&
+          isOwner(userId) &&
+          isVerifiedUser() &&
+          isValidDTREntry(incoming(), userId) &&
+          incoming().uid == existing().uid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'date',
+            'timeIn',
+            'timeOut',
+            'breakMinutes',
+            'isOvertime',
+            'overtimeReason',
+            'remarks',
+            'type',
+            'totalHours',
+            'updatedAt'
+          ]);
+
+        allow delete: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && isVerifiedUser();
+      }
+    }
+  }
+}

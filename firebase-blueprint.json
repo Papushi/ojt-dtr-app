@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Authenticated student profile, OJT target configuration, and Terms acceptance state.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "picture": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "supervisorName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "department": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "trainingCategory": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "targetHours": {
+          "type": "number"
+        },
+        "timeFormat": {
+          "type": "string",
+          "enum": ["12h", "24h"]
+        },
+        "roundTo15Min": {
+          "type": "boolean"
+        },
+        "onboardingCompleted": {
+          "type": "boolean"
+        },
+        "acceptedTermsAt": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "name",
+        "email",
+        "targetHours",
+        "timeFormat",
+        "roundTo15Min",
+        "onboardingCompleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DTREntry": {
+      "title": "DTREntry",
+      "description": "A single Daily Time Record shift entry owned by an OJT student.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "timeIn": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "timeOut": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "breakMinutes": {
+          "type": "number"
+        },
+        "isOvertime": {
+          "type": "boolean"
+        },
+        "overtimeReason": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "remarks": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "type": {
+          "type": "string",
+          "enum": ["regular", "holiday", "absent"]
+        },
+        "totalHours": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "date",
+        "timeIn",
+        "timeOut",
+        "breakMinutes",
+        "isOvertime",
+        "remarks",
+        "type",
+        "totalHours",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "Private user settings, OJT target configuration, and student profile for each authenticated Gmail user."
+    },
+    "/users/{userId}/entries/{entryId}": {
+      "schema": { "$ref": "#/entities/DTREntry" },
+      "description": "Private Daily Time Record entries belonging to the authenticated user."
+    }
+  }
+}

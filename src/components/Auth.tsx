@@ -1,76 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import { LogIn, LogOut, User } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface AuthProps {
-  onLogin: (user: UserProfile) => void;
   onLogout: () => void;
   user: UserProfile | null;
 }
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+export const Auth: React.FC<AuthProps> = ({ onLogout, user }) => {
+  const [imgError, setImgError] = useState(false);
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onLogout, user }) => {
   useEffect(() => {
-    /* global google */
-    if (window.google) {
-      window.google.accounts.id.initialize({
-        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", // Fallback for demo
-        callback: handleCredentialResponse,
-      });
+    setImgError(false);
+  }, [user?.picture]);
 
-      if (!user) {
-        window.google.accounts.id.renderButton(
-          document.getElementById("google-signin-btn"),
-          { theme: "outline", size: "large", shape: "pill" }
-        );
-      }
-    }
-  }, [user]);
+  const getInitials = (name: string) =>
+    name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'U';
 
-  const handleCredentialResponse = (response: any) => {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    const newUser: UserProfile = {
-      id: payload.sub,
-      name: payload.name,
-      email: payload.email,
-      picture: payload.picture,
-    };
-    onLogin(newUser);
-  };
-
-  if (user) {
-    return (
-      <div className="flex items-center gap-4 bg-white dark:bg-slate-900 p-2 pr-4 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
-        <img 
-          src={user.picture} 
-          alt={user.name} 
-          className="w-10 h-10 rounded-full border-2 border-blue-500"
-          referrerPolicy="no-referrer"
-        />
-        <div className="hidden sm:block">
-          <p className="text-sm font-semibold leading-none">{user.name}</p>
-          <p className="text-xs text-slate-500 truncate max-w-[150px]">{user.email}</p>
-        </div>
-        <button
-          onClick={onLogout}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors"
-          title="Sign Out"
-        >
-          <LogOut size={18} />
-        </button>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div id="google-signin-btn"></div>
-      <p className="text-xs text-slate-400">Sign in to sync your DTR records</p>
+    <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+      <div className="flex items-center gap-2.5 min-w-0">
+        {user.picture && !imgError ? (
+          <img
+            src={user.picture}
+            alt={user.name}
+            onError={() => setImgError(true)}
+            className="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-9 h-9 rounded-lg bg-blue-600 text-white font-display font-bold text-xs flex items-center justify-center shrink-0">
+            {getInitials(user.name)}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+            {user.name}
+          </p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            {user.email}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onLogout}
+        className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0"
+        title="Sign Out"
+        aria-label="Sign out"
+      >
+        <LogOut size={16} />
+      </button>
     </div>
   );
 };
